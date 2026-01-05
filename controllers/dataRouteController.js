@@ -36,9 +36,7 @@ const searchFields = {
 
 export default class DataRouteController {
 
-  // =====================
-  // 1️⃣ Pagination + sorting
-  // =====================
+  // Pagination + sorting
   static buildOptions(query) {
     const page = Number(query.page) || 1
     const limit = Number(query.limit) || 10
@@ -51,9 +49,7 @@ export default class DataRouteController {
     }
   }
 
-  // =====================
-  // 2️⃣ Search filter
-  // =====================
+  //  Search filter
   static buildSearchFilter(search, fields) {
     if (!search) return {}
 
@@ -65,9 +61,8 @@ export default class DataRouteController {
     }
   }
 
-  // =====================
-  // 3️⃣ Single collection data
-  // =====================
+  //  Single collection data
+  
   static async getCollection(req, res) {
     const name = req.params.collection
     
