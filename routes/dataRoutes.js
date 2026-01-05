@@ -7,6 +7,7 @@ const router = express.Router()
 router.get(
     '/data/:collection', 
     asyncHandler(DataRouteController.getCollection))
+    
 router.get(
     '/search', 
     asyncHandler(DataRouteController.search)

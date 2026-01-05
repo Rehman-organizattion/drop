@@ -1,4 +1,7 @@
+// ===== GitHub API helper =====
 import GitHubAPI from '../helpers/githubApi.js'
+
+// ===== Database models =====
 import GithubOrganization from '../models/GithubOrganization.js'
 import GithubRepo from '../models/GithubRepo.js'
 import GithubCommit from '../models/GithubCommit.js'
@@ -8,193 +11,176 @@ import GithubChangelog from '../models/GithubChangelog.js'
 import GithubUser from '../models/GithubUser.js'
 import GithubIntegration from '../models/GithubIntegration.js'
 
+
+// GitHub API client (sirf ek baar banega)
 let apiClient = null
 
+
 export default class GitHubController {
-  static async getApiClient() {
-    if (!apiClient) {
-      const integration = await GithubIntegration.findOne({ integrationStatus: 'active' })
-      if (!integration) {
-        throw new Error('No active GitHub integration found')
-      }
-      apiClient = new GitHubAPI(integration.oauthToken)
+
+  // =============================
+  // 1️⃣ GitHub API client lao
+  // =============================
+  static async getApi() {
+    if (apiClient) return apiClient
+
+    const integration = await GithubIntegration.findOne({
+      integrationStatus: 'active'
+    })
+
+    if (!integration) {
+      throw new Error('GitHub integration not active')
     }
+
+    apiClient = new GitHubAPI(integration.oauthToken)
     return apiClient
   }
 
-  static async fetchAllPages(fetchFn, perPage = 100) {
-    const allItems = []
+
+  // =============================
+  // 2️⃣ Pagination handle karo
+  // =============================
+  static async fetchAll(fetchFn) {
     let page = 1
+    const allData = []
+    const perPage = 100
 
     while (true) {
-      const items = await fetchFn(page, perPage)
-      if (items.length === 0) break
-      allItems.push(...items)
-      if (items.length < perPage) break
+      const data = await fetchFn(page, perPage)
+      if (data.length === 0) break
+
+      allData.push(...data)
+      if (data.length < perPage) break
       page++
     }
 
-    return allItems
+    return allData
   }
 
-  static async bulkUpsert(Model, docs, uniqueField) {
-    if (docs.length === 0) return []
 
-    const operations = docs.map(doc => ({
-      updateOne: {
-        filter: { [uniqueField]: doc[uniqueField] },
-        update: { $set: { ...doc, syncedAt: new Date() } },
-        upsert: true
-      }
-    }))
-
-    await Model.bulkWrite(operations)
-    return docs
+  // =============================
+  // 3️⃣ Database mein save karo
+  // =============================
+  static async save(Model, data, uniqueKey) {
+    for (const item of data) {
+      await Model.updateOne(
+        { [uniqueKey]: item[uniqueKey] },
+        { $set: { ...item, syncedAt: new Date() } },
+        { upsert: true }
+      )
+    }
   }
 
+
+  // =============================
+  // 4️⃣ Organizations
+  // =============================
   static async fetchOrganizations() {
-    const api = await this.getApiClient()
-    const orgs = await api.getOrganizations()
-    const docs = orgs.map(org => ({ ...org, syncedAt: new Date() }))
-    await this.bulkUpsert(GithubOrganization, docs, 'id')
-    return docs
-  }
+    const api = await this.getApi()
+    let orgs = await api.getOrganizations()
 
-  static async fetchRepos(orgName) {
-    const api = await this.getApiClient()
-    const repos = await api.getOrganizationRepos(orgName)
-    const docs = repos.map(repo => ({ ...repo, syncedAt: new Date() }))
-    await this.bulkUpsert(GithubRepo, docs, 'id')
-    return docs
-  }
-
-  static async fetchCommits(owner, repoName) {
-    const api = await this.getApiClient()
-    const commits = await this.fetchAllPages((page, perPage) =>
-      api.getRepoCommits(owner, repoName, page, perPage)
-    )
-
-    const docs = commits.map(commit => ({
-      ...commit,
-      repo: repoName,
-      repo_full_name: `${owner}/${repoName}`,
-      syncedAt: new Date()
-    }))
-
-    await this.bulkUpsert(GithubCommit, docs, 'sha')
-    return docs
-  }
-
-  static async fetchPulls(owner, repoName) {
-    const api = await this.getApiClient()
-    const pulls = await this.fetchAllPages((page, perPage) =>
-      api.getRepoPulls(owner, repoName, page, perPage)
-    )
-
-    const docs = pulls.map(pull => ({
-      ...pull,
-      repo: repoName,
-      repo_full_name: `${owner}/${repoName}`,
-      syncedAt: new Date()
-    }))
-
-    await this.bulkUpsert(GithubPull, docs, 'id')
-    return docs
-  }
-
-  static async fetchIssues(owner, repoName) {
-    const api = await this.getApiClient()
-    const issues = await this.fetchAllPages((page, perPage) =>
-      api.getRepoIssues(owner, repoName, page, perPage)
-    )
-
-    const docs = issues.map(issue => ({
-      ...issue,
-      repo: repoName,
-      repo_full_name: `${owner}/${repoName}`,
-      syncedAt: new Date()
-    }))
-
-    await this.bulkUpsert(GithubIssue, docs, 'id')
-
-    for (const issue of issues) {
-      if (issue.number) {
-        await this.fetchChangelogs(owner, repoName, issue.number)
+    if (orgs.length === 0) {
+      try {
+        const org = await api.getOrganizationByName('Rehman-organizattion')
+        if (org) orgs = [org]
+      } catch (error) {
+        console.error('Error:', error)
       }
     }
 
-    return docs
+    await this.save(GithubOrganization, orgs, 'id')
+    return orgs
   }
 
-  static async fetchChangelogs(owner, repoName, issueNumber) {
-    const api = await this.getApiClient()
-    const events = await this.fetchAllPages((page, perPage) =>
-      api.getIssueEvents(owner, repoName, issueNumber, page, perPage)
+
+  // =============================
+  // 5️⃣ Repositories
+  // =============================
+  static async fetchRepos(orgName) {
+    const api = await this.getApi()
+    const repos = await api.getOrganizationRepos(orgName)
+
+    await this.save(GithubRepo, repos, 'id')
+    return repos
+  }
+
+
+  // =============================
+  // 6️⃣ Commits
+  // =============================
+  static async fetchCommits(owner, repo) {
+    const api = await this.getApi()
+
+    const commits = await this.fetchAll(page =>
+      api.getRepoCommits(owner, repo, page)
     )
 
-    const docs = events.map(event => ({
-      ...event,
-      repo: repoName,
-      repo_full_name: `${owner}/${repoName}`,
-      issue_number: issueNumber,
-      syncedAt: new Date()
-    }))
-
-    await this.bulkUpsert(GithubChangelog, docs, 'id')
-    return docs
+    await this.save(GithubCommit, commits, 'sha')
+    return commits
   }
 
+
+  // =============================
+  // 7️⃣ Pull Requests
+  // =============================
+  static async fetchPulls(owner, repo) {
+    const api = await this.getApi()
+
+    const pulls = await this.fetchAll(page =>
+      api.getRepoPulls(owner, repo, page)
+    )
+
+    await this.save(GithubPull, pulls, 'id')
+    return pulls
+  }
+
+
+  // =============================
+  // 8️⃣ Issues
+  // =============================
+  static async fetchIssues(owner, repo) {
+    const api = await this.getApi()
+
+    const issues = await this.fetchAll(page =>
+      api.getRepoIssues(owner, repo, page)
+    )
+
+    await this.save(GithubIssue, issues, 'id')
+    return issues
+  }
+
+
+  // =============================
+  // 9️⃣ Users
+  // =============================
   static async fetchUsers(orgName) {
-    const api = await this.getApiClient()
-    const members = await this.fetchAllPages((page, perPage) =>
-      api.getOrganizationMembers(orgName, page, perPage)
+    const api = await this.getApi()
+
+    const users = await this.fetchAll(page =>
+      api.getOrganizationMembers(orgName, page)
     )
 
-    const docs = members.map(member => ({
-      ...member,
-      organization: orgName,
-      syncedAt: new Date()
-    }))
-
-    await this.bulkUpsert(GithubUser, docs, 'id')
-    return docs
+    await this.save(GithubUser, users, 'id')
+    return users
   }
 
-  static async resyncAllData() {
-    const results = {
-      organizations: 0,
-      repos: 0,
-      commits: 0,
-      pulls: 0,
-      issues: 0,
-      changelogs: 0,
-      users: 0
-    }
 
+  // =============================
+  // 🔟 Sab kuch ek sath sync karo
+  // =============================
+  static async resyncAllData() {
     const orgs = await this.fetchOrganizations()
-    results.organizations = orgs.length
 
     for (const org of orgs) {
-      const [repos, users] = await Promise.all([
-        this.fetchRepos(org.login),
-        this.fetchUsers(org.login)
-      ])
-
-      results.repos += repos.length
-      results.users += users.length
+      const repos = await this.fetchRepos(org.login)
+      await this.fetchUsers(org.login)
 
       for (const repo of repos) {
         const [owner, repoName] = repo.full_name.split('/')
 
-        const [commits, pulls, issues] = await Promise.all([
-          this.fetchCommits(owner, repoName),
-          this.fetchPulls(owner, repoName),
-          this.fetchIssues(owner, repoName)
-        ])
-
-        results.commits += commits.length
-        results.pulls += pulls.length
-        results.issues += issues.length
+        await this.fetchCommits(owner, repoName)
+        await this.fetchPulls(owner, repoName)
+        await this.fetchIssues(owner, repoName)
       }
     }
 
@@ -204,6 +190,11 @@ export default class GitHubController {
       await integration.save()
     }
 
-    return results
+    return { message: 'GitHub data sync complete' }
   }
 }
+
+
+
+
+

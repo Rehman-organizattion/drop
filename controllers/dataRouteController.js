@@ -1,3 +1,4 @@
+// ===== Models (tables) =====
 import GithubOrganization from '../models/GithubOrganization.js'
 import GithubRepo from '../models/GithubRepo.js'
 import GithubCommit from '../models/GithubCommit.js'
@@ -5,8 +6,12 @@ import GithubPull from '../models/GithubPull.js'
 import GithubIssue from '../models/GithubIssue.js'
 import GithubChangelog from '../models/GithubChangelog.js'
 import GithubUser from '../models/GithubUser.js'
+
+// ===== Response helper =====
 import Response from '../helpers/response.js'
 
+
+// ===== Collection name → Model mapping =====
 const models = {
   organizations: GithubOrganization,
   repos: GithubRepo,
@@ -17,114 +22,103 @@ const models = {
   users: GithubUser
 }
 
+// ===== Fields jahan search hoga =====
 const searchFields = {
-  organizations: ['login', 'name', 'description'],
-  repos: ['name', 'full_name', 'description'],
+  organizations: ['login', 'name'],
+  repos: ['name', 'description'],
   commits: ['sha'],
-  pulls: ['title', 'state'],
-  issues: ['title', 'state'],
+  pulls: ['title'],
+  issues: ['title'],
   changelogs: ['event'],
-  users: ['login', 'name', 'email']
+  users: ['login', 'email']
 }
 
+
 export default class DataRouteController {
+
+  // =====================
+  // 1️⃣ Pagination + sorting
+  // =====================
   static buildOptions(query) {
-    const page = parseInt(query.page) || 1
-    const limit = parseInt(query.limit) || 10
-    const skip = (page - 1) * limit
-    const sortField = query.sort_by || 'createdAt'
-    const sortOrder = query.sort_order === 'asc' ? 1 : -1
+    const page = Number(query.page) || 1
+    const limit = Number(query.limit) || 10
 
     return {
       page,
       limit,
-      skip,
-      sort: { [sortField]: sortOrder }
+      skip: (page - 1) * limit,
+      sort: { createdAt: -1 } // latest first
     }
   }
 
-  static buildFilter(query) {
-    if (!query.filter) return {}
+  // =====================
+  // 2️⃣ Search filter
+  // =====================
+  static buildSearchFilter(search, fields) {
+    if (!search) return {}
 
-    try {
-      return JSON.parse(query.filter)
-    } catch (error) {
-      return {}
-    }
-  }
-
-  static buildSearchFilter(searchTerm, fields) {
-    if (!searchTerm || !fields || fields.length === 0) return {}
-
+    // Search case-insensitive in every field
     return {
       $or: fields.map(field => ({
-        [field]: { $regex: searchTerm, $options: 'i' }
+        [field]: { $regex: search, $options: 'i' }
       }))
     }
   }
 
-  static formatResponse(data, total, page, limit) {
-    return {
-      data,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasNext: page * limit < total,
-        hasPrev: page > 1
-      }
-    }
-  }
-
+  // =====================
+  // 3️⃣ Single collection data
+  // =====================
   static async getCollection(req, res) {
-    const collection = req.params.collection
-    const Model = models[collection]
+    const name = req.params.collection
+    
+    const Model = models[name]
 
-    if (!Model) {
-      throw new Error('Collection not found')
-    }
+    if (!Model) return Response.error(res, 'Collection not found')
 
-    const options = this.buildOptions(req.query)
-    const filter = this.buildFilter(req.query)
-    const fields = searchFields[collection] || []
-    const search = this.buildSearchFilter(req.query.search, fields)
+    const options = DataRouteController.buildOptions(req.query)
+    const fields = searchFields[name] || []
+    const searchQuery = DataRouteController.buildSearchFilter(req.query.search, fields)
 
-    const query = { ...filter, ...search }
-
-    const data = await Model.find(query)
-      .sort(options.sort)
+    // database se data nikalna
+    const data = await Model.find(searchQuery)
       .skip(options.skip)
       .limit(options.limit)
+      .sort(options.sort)
       .lean()
 
-    const total = await Model.countDocuments(query)
-    const result = this.formatResponse(data, total, options.page, options.limit)
+    const total = await Model.countDocuments(searchQuery)
 
-    return Response.paginated(res, result.data, result.pagination)
+    return Response.paginated(res, data, {
+      page: options.page,
+      limit: options.limit,
+      total,
+      totalPages: Math.ceil(total / options.limit),
+      hasNext: options.page * options.limit < total,
+      hasPrev: options.page > 1
+    })
   }
 
+  // =====================
+  // 4️⃣ Global search (sab collections)
+  // =====================
   static async search(req, res) {
     const keyword = req.query.q
-    if (!keyword) {
-      throw new Error('Search query missing')
-    }
+    if (!keyword) return Response.error(res, 'Search keyword missing')
 
     const result = {}
 
-    for (const collection in models) {
-      const Model = models[collection]
-      const fields = searchFields[collection]
+    for (const name in models) {
+      const Model = models[name]
+      const fields = searchFields[name]
+
       if (!fields) continue
 
-      const searchQuery = this.buildSearchFilter(keyword, fields)
-      const data = await Model.find(searchQuery).limit(10).lean()
+      const query = DataRouteController.buildSearchFilter(keyword, fields)
+      const data = await Model.find(query).limit(5).lean()
 
-      if (data.length > 0) {
-        result[collection] = data
-      }
+      if (data.length > 0) result[name] = data
     }
 
-    return Response.success(res, result, 'Search done')
+    return Response.success(res, result, 'Search completed')
   }
 }

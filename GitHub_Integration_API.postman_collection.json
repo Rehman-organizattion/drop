@@ -1,0 +1,391 @@
+{
+	"info": {
+		"name": "GitHub Integration API",
+		"description": "Complete API collection for GitHub Integration Backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Root",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/",
+					"host": ["{{base_url}}"],
+					"path": [""]
+				}
+			}
+		},
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "GitHub Login",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/github/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "github", "login"]
+						},
+						"description": "Redirects to GitHub OAuth page"
+					}
+				},
+				{
+					"name": "GitHub Callback",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/github/callback?code=xxx",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "github", "callback"],
+							"query": [
+								{
+									"key": "code",
+									"value": "xxx",
+									"description": "Authorization code from GitHub"
+								}
+							]
+						},
+						"description": "Handles OAuth callback (called automatically by GitHub)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Integration",
+			"item": [
+				{
+					"name": "Get Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/integration/status",
+							"host": ["{{base_url}}"],
+							"path": ["integration", "status"]
+						}
+					}
+				},
+				{
+					"name": "Resync Data",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/integration/resync",
+							"host": ["{{base_url}}"],
+							"path": ["integration", "resync"]
+						}
+					}
+				},
+				{
+					"name": "Remove Data",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/integration/remove",
+							"host": ["{{base_url}}"],
+							"path": ["integration", "remove"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Data Collections",
+			"item": [
+				{
+					"name": "Get Organizations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/data/organizations?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["data", "organizations"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Repos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/data/repos?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["data", "repos"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Commits",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/data/commits?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["data", "commits"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Pulls",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/data/pulls?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["data", "pulls"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Issues",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/data/issues?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["data", "issues"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/data/users?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["data", "users"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Changelogs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/data/changelogs?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["data", "changelogs"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Issues with Filter",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/data/issues?page=1&limit=10&filter={\"state\":\"open\"}",
+							"host": ["{{base_url}}"],
+							"path": ["data", "issues"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "filter",
+									"value": "{\"state\":\"open\"}"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Repos with Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/data/repos?page=1&limit=10&search=test",
+							"host": ["{{base_url}}"],
+							"path": ["data", "repos"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "search",
+									"value": "test"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Commits with Sorting",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/data/commits?page=1&limit=20&sort_by=commit.author.date&sort_order=desc",
+							"host": ["{{base_url}}"],
+							"path": ["data", "commits"],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "sort_by",
+									"value": "commit.author.date"
+								},
+								{
+									"key": "sort_order",
+									"value": "desc"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Search",
+			"item": [
+				{
+					"name": "Global Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/search?q=bug",
+							"host": ["{{base_url}}"],
+							"path": ["search"],
+							"query": [
+								{
+									"key": "q",
+									"value": "bug",
+									"description": "Search keyword"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Authentication",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/search?q=authentication",
+							"host": ["{{base_url}}"],
+							"path": ["search"],
+							"query": [
+								{
+									"key": "q",
+									"value": "authentication"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}
+

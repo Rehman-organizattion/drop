@@ -5,7 +5,16 @@ import AuthMiddleware from '../middleware/authMiddleware.js'
 
 const router = express.Router()
 
-router.get('/github/login', AuthMiddleware.checkGitHubConfig, AuthController.login)
-router.get('/github/callback', AuthMiddleware.checkGitHubConfig, asyncHandler(AuthController.callback))
+router.get(
+    '/github/login', 
+    AuthMiddleware.checkGitHubConfig, 
+    asyncHandler(AuthController.login)
+)
+
+    router.get(
+        '/github/callback', 
+        AuthMiddleware.checkGitHubConfig, 
+        asyncHandler(AuthController.callback)
+    )
 
 export default router

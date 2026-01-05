@@ -4,39 +4,65 @@ import models from '../config/models.js'
 import Response from '../helpers/response.js'
 
 export default class IntegrationController {
+
+  // ======================
+  // GitHub connected hai?
+  // ======================
   static async getStatus(req, res) {
-    const integration = await GithubIntegration.findOne({ integrationStatus: 'active' })
 
+    // active integration uthao
+    const integration = await GithubIntegration.findOne({
+      integrationStatus: 'active'
+    })
+
+    // agar nahi mili
     if (!integration) {
-      throw new Error('No active GitHub integration found')
+      return Response.error(res, 'GitHub not connected')
     }
 
+    // har table ka count
     const stats = {}
-    for (const [name, Model] of Object.entries(models)) {
-      stats[name] = await Model.countDocuments()
-    }
+
+    stats.organizations = await models.organizations.countDocuments()
+    stats.repos = await models.repos.countDocuments()
+    stats.commits = await models.commits.countDocuments()
+    stats.pulls = await models.pulls.countDocuments()
+    stats.issues = await models.issues.countDocuments()
+    stats.users = await models.users.countDocuments()
 
     return Response.success(res, {
-      status: 'connected',
-      integration: {
-        githubUsername: integration.githubUsername,
-        integrationStatus: integration.integrationStatus,
-        connectionTimestamp: integration.connectionTimestamp,
-        lastSyncTimestamp: integration.lastSyncTimestamp
-      },
+      connected: true,
+      user: integration.githubUsername,
+      lastSync: integration.lastSyncTimestamp,
       stats
     })
   }
 
+
+  // ======================
+  // Sara GitHub data delete
+  // ======================
   static async remove(req, res) {
-    for (const Model of Object.values(models)) {
-      await Model.deleteMany({})
-    }
-    return Response.success(res, null, 'Integration data removed successfully')
+
+    await models.organizations.deleteMany({})
+    await models.repos.deleteMany({})
+    await models.commits.deleteMany({})
+    await models.pulls.deleteMany({})
+    await models.issues.deleteMany({})
+    await models.users.deleteMany({})
+
+    return Response.success(res, null, 'All data deleted')
   }
 
+
+  // ======================
+  // Dubara GitHub sync
+  // ======================
   static async resync(req, res) {
-    const results = await GitHubController.resyncAllData()
-    return Response.success(res, results, 'Data resynced successfully')
+
+    // bas ek function call
+    const result = await GitHubController.resyncAllData()
+
+    return Response.success(res, result, 'Data synced again')
   }
 }

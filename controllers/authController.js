@@ -4,42 +4,50 @@ import GithubIntegration from '../models/GithubIntegration.js'
 import GitHubController from './githubController.js'
 
 export default class AuthController {
+
+  // =========================
+  // 1️⃣ GitHub login redirect
+  // =========================
   static login(req, res) {
+    // GitHub OAuth URL
     const url = `https://github.com/login/oauth/authorize?client_id=${config.github.clientID}&scope=user:email,read:org,repo&redirect_uri=${config.github.callbackURL}`
     res.redirect(url)
   }
 
+  // =========================
+  // 2️⃣ GitHub OAuth callback
+  // =========================
   static async callback(req, res) {
     const code = req.query.code
-    if (!code) {
-      return res.redirect('/auth/github/login')
-    }
+
+    console.log("code :",code)
+
+    // if no code found
+    if (!code) return res.redirect('/auth/github/login')
 
     try {
+      
+      // taking github access token
+      
       const tokenRes = await axios.post('https://github.com/login/oauth/access_token', {
         client_id: config.github.clientID,
         client_secret: config.github.clientSecret,
-        code: code
-      }, {
-        headers: { Accept: 'application/json' }
-      })
+        code
+      }, { headers: { Accept: 'application/json' } })
 
       const token = tokenRes.data.access_token
-      if (!token) {
-        return res.redirect('/auth/github/login')
-      }
+      
+      if (!token) return res.redirect('/auth/github/login')
 
+      // taking github user info
       const userRes = await axios.get('https://api.github.com/user', {
-        headers: {
-          Authorization: `token ${token}`,
-          Accept: 'application/vnd.github.v3+json'
-        }
+        headers: { Authorization: `token ${token}` }
       })
-
       const user = userRes.data
 
+      // 2c. Database mein save karo
       await GithubIntegration.findOneAndUpdate(
-        { githubUserId: user.id.toString() },
+        { githubUserId: user.id.toString() },  // same user update
         {
           githubUserId: user.id.toString(),
           githubUsername: user.login,
@@ -48,17 +56,17 @@ export default class AuthController {
           integrationStatus: 'active',
           connectionTimestamp: new Date()
         },
-        { upsert: true, new: true }
+        { upsert: true, new: true } // upsert if record donot available then created and i am available then update that
       )
 
+      // 2d. GitHub data dubara sync
       await GitHubController.resyncAllData()
+
+      // 2e. Integration status page redirect
       res.redirect('/integration/status')
-    } catch (error) {
-      console.error('OAuth error:', error)
+
+    } catch (err) {
       res.redirect('/auth/github/login')
     }
   }
 }
-
-
-
