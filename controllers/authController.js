@@ -5,19 +5,17 @@ import GitHubController from './githubController.js'
 
 export default class AuthController {
 
-  // =========================
-  // 1️⃣ GitHub login redirect
-  // =========================
+  // GitHub login redirect
+  
   static login(req, res) {
     // GitHub OAuth URL
     const url = `https://github.com/login/oauth/authorize?client_id=${config.github.clientID}&scope=user:email,read:org,repo&redirect_uri=${config.github.callbackURL}`
     res.redirect(url)
   }
 
-  // =========================
-  // 2️⃣ GitHub OAuth callback
-  // =========================
-  static async callback(req, res) {
+ // GitHub OAuth callback
+ 
+ static async callback(req, res) {
     const code = req.query.code
 
     console.log("code :",code)
@@ -40,12 +38,14 @@ export default class AuthController {
       if (!token) return res.redirect('/auth/github/login')
 
       // taking github user info
+      
       const userRes = await axios.get('https://api.github.com/user', {
         headers: { Authorization: `token ${token}` }
       })
       const user = userRes.data
 
-      // 2c. Database mein save karo
+      //  save in db
+      
       await GithubIntegration.findOneAndUpdate(
         { githubUserId: user.id.toString() },  // same user update
         {
@@ -59,10 +59,10 @@ export default class AuthController {
         { upsert: true, new: true } // upsert if record donot available then created and i am available then update that
       )
 
-      // 2d. GitHub data dubara sync
+      // GitHub data again sync
       await GitHubController.resyncAllData()
 
-      // 2e. Integration status page redirect
+      // Integration status page redirect
       res.redirect('/integration/status')
 
     } catch (err) {

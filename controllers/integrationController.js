@@ -5,24 +5,16 @@ import Response from '../helpers/response.js'
 
 export default class IntegrationController {
 
-  // ======================
-  // GitHub connected hai?
-  // ======================
   static async getStatus(req, res) {
-
-    // active integration uthao
     const integration = await GithubIntegration.findOne({
       integrationStatus: 'active'
     })
 
-    // agar nahi mili
     if (!integration) {
       return Response.error(res, 'GitHub not connected')
     }
 
-    // har table ka count
     const stats = {}
-
     stats.organizations = await models.organizations.countDocuments()
     stats.repos = await models.repos.countDocuments()
     stats.commits = await models.commits.countDocuments()
@@ -38,12 +30,7 @@ export default class IntegrationController {
     })
   }
 
-
-  // ======================
-  // Sara GitHub data delete
-  // ======================
   static async remove(req, res) {
-
     await models.organizations.deleteMany({})
     await models.repos.deleteMany({})
     await models.commits.deleteMany({})
@@ -54,15 +41,8 @@ export default class IntegrationController {
     return Response.success(res, null, 'All data deleted')
   }
 
-
-  // ======================
-  // Dubara GitHub sync
-  // ======================
   static async resync(req, res) {
-
-    // bas ek function call
     const result = await GitHubController.resyncAllData()
-
     return Response.success(res, result, 'Data synced again')
   }
 }
